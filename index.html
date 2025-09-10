@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winter Arc Diary - Petar Pavlović</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+        .calendar-day {
+            transition: all 0.2s ease-in-out;
+        }
+        .calendar-day.selected {
+            background-color: #3b82f6;
+            color: white;
+            border-radius: 50%;
+        }
+        .calendar-day.today {
+            border: 2px solid #3b82f6;
+            border-radius: 50%;
+        }
+        .goal-item input:checked + label {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 250px;
+            max-height: 300px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 300px;
+                max-height: 350px;
+            }
+        }
+    </style>
+    <!-- Chosen Palette: Calm Harmony (Warm neutrals with muted blue accents) -->
+    <!-- Application Structure Plan: A single-page dashboard with a calendar-based navigation. The main view displays the selected day's interactive checklist and reflection notes. A sidebar contains the contract/rules (in a modal), a weekly progress chart, and the calendar. This task-focused design is more efficient and motivating than a long document, promoting daily engagement and clear progress tracking. -->
+    <!-- Visualization & Content Choices: - Daily Goals: Interactive checklist (HTML/JS) for direct task management. Goal: Track. - Reflections: Textareas (HTML/JS) for easy input. Goal: Inform/Organize. - Weekly Progress: Bar Chart (Chart.js/Canvas) to visualize consistency. Goal: Compare/Change. Interaction: Updates in real-time. Justification: Visual feedback is a powerful motivator. - Navigation: Calendar (HTML/JS) for quick access to any day. Goal: Organize. All interactions are handled with vanilla JS and data is persisted in localStorage for a seamless single-user experience. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div id="contract-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full">
+            <h2 class="text-2xl font-bold mb-4 text-gray-900">My Winter Arc Contract & Rules</h2>
+            <div class="space-y-6 text-gray-600 max-h-[70vh] overflow-y-auto pr-2">
+                <div>
+                    <h3 class="font-semibold text-lg mb-2 text-gray-800">Personal Contract</h3>
+                    <p><strong>I, Petar Pavlović,</strong> commit to my personal Winter Arc journey starting on October 1st, 2025, and concluding on January 1st, 2026. This period will be a time of intentional growth and self-improvement, where I will embrace discipline and consistency to become a stronger, healthier, and more focused version of myself. I will use the quiet, cold months to build lasting habits that will serve me throughout the new year and beyond.</p>
+                </div>
+                <div>
+                    <h3 class="font-semibold text-lg mb-2 text-gray-800">The Rules</h3>
+                    <ol class="list-decimal list-inside space-y-2">
+                        <li><strong>Set Clear Goals:</strong> I will define specific, realistic, and measurable goals for my physical, mental, and personal development.</li>
+                        <li><strong>Stay Consistent:</strong> I will show up for myself every day, even when I don't feel motivated. Small, consistent actions are more powerful than large, sporadic efforts.</li>
+                        <li><strong>Embrace Discomfort:</strong> I understand that growth happens outside of my comfort zone. I will face mental and physical challenges head-on.</li>
+                        <li><strong>Prioritize Rest and Recovery:</strong> I will listen to my body and allow for adequate rest, knowing that recovery is essential for progress.</li>
+                        <li><strong>Reflect and Adapt:</strong> I will use this diary to reflect on my progress, celebrate my wins, and learn from my setbacks. I will adjust my plan as needed to ensure my success.</li>
+                        <li><strong>Avoid Comparison:</strong> My journey is my own. I will not compare my progress to others but will focus solely on my own improvement.</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="text-right mt-6">
+                <button onclick="toggleModal(false)" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="min-h-screen flex flex-col lg:flex-row">
+        <aside class="w-full lg:w-1/3 xl:w-1/4 bg-white p-6 border-b lg:border-r border-gray-200 flex flex-col">
+            <h1 class="text-2xl font-bold text-gray-900">Winter Arc Diary</h1>
+            <p class="text-gray-500 mb-6">Welcome, Petar Pavlović</p>
+            
+            <button onclick="toggleModal(true)" class="w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg mb-4 transition-colors">My Contract & Rules</button>
+            <button id="get-motivation-btn" class="w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors">✨ Get Motivation</button>
+
+            <div class="mb-6 mt-6">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 id="calendar-month-year" class="font-semibold text-lg"></h2>
+                    <div>
+                        <button id="prev-month" class="p-1 rounded-full hover:bg-gray-200 transition-colors">&lt;</button>
+                        <button id="next-month" class="p-1 rounded-full hover:bg-gray-200 transition-colors">&gt;</button>
+                    </div>
+                </div>
+                <div class="calendar-grid text-center text-sm font-medium text-gray-500 mb-2">
+                    <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+                </div>
+                <div id="calendar-body" class="calendar-grid"></div>
+            </div>
+            
+            <div class="mt-auto pt-6">
+                <h2 class="font-semibold text-lg mb-2">This Week's Consistency</h2>
+                <div class="chart-container">
+                    <canvas id="progressChart"></canvas>
+                </div>
+            </div>
+        </aside>
+
+        <main class="w-full lg:w-2/3 xl:w-3/4 p-6 md:p-8 overflow-y-auto">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
+                    <h2 id="current-date-display" class="text-3xl font-bold text-gray-900 mb-2 sm:mb-0"></h2>
+                    <div class="flex items-center space-x-2">
+                        <button id="prev-day" class="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors">Previous Day</button>
+                        <button id="go-to-today" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Today</button>
+                        <button id="next-day" class="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors">Next Day</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
+                    <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-gray-800">Today's Goals</h3>
+                    <div id="goals-list" class="space-y-4"></div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="text-xl font-semibold mb-4 border-b pb-2 text-gray-800">Reflections</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="reflection-well" class="block text-sm font-medium text-gray-700 mb-1">What went well today?</label>
+                            <textarea id="reflection-well" rows="4" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                        <div>
+                            <label for="reflection-improve" class="block text-sm font-medium text-gray-700 mb-1">What could I improve for tomorrow?</label>
+                            <textarea id="reflection-improve" rows="4" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex flex-col space-y-4">
+                         <button id="summarize-btn" class="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors">✨ Summarize Reflections</button>
+                         <div id="reflection-summary" class="hidden bg-gray-100 p-4 rounded-lg text-sm text-gray-700"></div>
+                    </div>
+                </div>
+                
+                <div id="motivation-box" class="mt-6 p-6 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 hidden">
+                    <p class="font-semibold mb-2">Daily Motivation ✨</p>
+                    <p id="motivation-text"></p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const START_DATE = new Date('2025-10-01T00:00:00');
+    const END_DATE = new Date('2026-01-01T00:00:00');
+    
+    let currentDate = new Date();
+    if (currentDate < START_DATE || currentDate > END_DATE) {
+        currentDate = START_DATE;
+    }
+    currentDate.setHours(0, 0, 0, 0);
+
+    let calendarDate = new Date(currentDate.getTime());
+
+    let diaryData = {};
+    let progressChart;
+    const apiKey = "";
+    
+    const defaultGoals = [
+        { text: 'Wake up at:', type: 'time', value: '05:30', completed: false },
+        { text: 'Gym', type: 'none', value: '', completed: false },
+        { text: 'Calories - kcal:', type: 'number', value: '2796', completed: false },
+        { text: 'Protein - g:', type: 'number', value: '239', completed: false },
+        { text: 'Carbs - g:', type: 'number', value: '317', completed: false },
+        { text: 'Fat - g:', type: 'number', value: '71', completed: false },
+        { text: 'No Artificial Sugar', type: 'none', value: '', completed: false },
+        { text: 'Journal', type: 'none', value: '', completed: false },
+        { text: 'Drink L of water:', type: 'number', value: '3', completed: false },
+        { text: 'Read pages:', type: 'number', value: '10', completed: false },
+        { text: 'Steps:', type: 'number', value: '10000', completed: false },
+        { text: 'hours of sleep:', type: 'number', value: '8', completed: false },
+        { text: 'Instagram min:', type: 'number', value: '20', completed: false },
+        { text: 'Tiktok min:', type: 'number', value: '20', completed: false },
+        { text: 'Cold Shower', type: 'none', value: '', completed: false },
+        { text: 'No Alcohol', type: 'none', value: '', completed: false },
+        { text: 'No Fap', type: 'none', value: '', completed: false },
+        { text: 'Work on a personal project for hours:', type: 'number', value: '1', completed: false },
+    ];
+    
+    function formatDateKey(date) {
+        return date.toISOString().split('T')[0];
+    }
+    
+    function initData() {
+        const storedData = localStorage.getItem('winterArcDiary');
+        if (storedData) {
+            diaryData = JSON.parse(storedData);
+        } else {
+            let date = new Date(START_DATE.getTime());
+            while(date <= END_DATE) {
+                const key = formatDateKey(date);
+                diaryData[key] = {
+                    goals: JSON.parse(JSON.stringify(defaultGoals)),
+                    reflections: {
+                        well: '',
+                        improve: ''
+                    }
+                };
+                date.setDate(date.getDate() + 1);
+            }
+        }
+    }
+    
+    function saveData() {
+        localStorage.setItem('winterArcDiary', JSON.stringify(diaryData));
+    }
+
+    function renderDay(date) {
+        const dateKey = formatDateKey(date);
+        const dayData = diaryData[dateKey];
+        if (!dayData) return;
+
+        document.getElementById('current-date-display').textContent = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+        const goalsList = document.getElementById('goals-list');
+        goalsList.innerHTML = '';
+        dayData.goals.forEach((goal, index) => {
+            const item = document.createElement('div');
+            item.className = 'goal-item flex items-center';
+            const inputId = `goal-${dateKey}-${index}`;
+            
+            let goalControls = '';
+            if (goal.type === 'time') {
+                goalControls = `<input type="time" value="${goal.value}" class="ml-2 p-1 border rounded-md" data-index="${index}" data-type="value">`;
+            } else if (goal.type === 'text') {
+                goalControls = `<input type="text" value="${goal.value}" class="ml-2 p-1 border rounded-md" data-index="${index}" data-type="value">`;
+            } else if (goal.type === 'number') {
+                goalControls = `<input type="number" value="${goal.value}" class="ml-2 w-16 p-1 border rounded-md" data-index="${index}" data-type="value">`;
+            }
+
+            item.innerHTML = `
+                <input type="checkbox" id="${inputId}" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" data-index="${index}" ${goal.completed ? 'checked' : ''}>
+                <label for="${inputId}" class="ml-3 text-gray-700 flex-grow">${goal.text}</label>
+                ${goalControls}
+            `;
+            goalsList.appendChild(item);
+        });
+
+        document.getElementById('reflection-well').value = dayData.reflections.well;
+        document.getElementById('reflection-improve').value = dayData.reflections.improve;
+
+        renderCalendar();
+        renderChart();
+    }
+
+    function renderCalendar() {
+        const month = calendarDate.getMonth();
+        const year = calendarDate.getFullYear();
+        
+        document.getElementById('calendar-month-year').textContent = `${calendarDate.toLocaleString('default', { month: 'long' })} ${year}`;
+        
+        const firstDay = new Date(year, month, 1);
+        const calendarBody = document.getElementById('calendar-body');
+        calendarBody.innerHTML = '';
+        
+        const dayOfWeek = firstDay.getDay();
+        const startOffset = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+
+        for (let i = 0; i < startOffset; i++) {
+            calendarBody.appendChild(document.createElement('div'));
+        }
+
+        const lastDay = new Date(year, month + 1, 0);
+        for (let day = 1; day <= lastDay.getDate(); day++) {
+            const date = new Date(year, month, day);
+            const key = formatDateKey(date);
+            const cell = document.createElement('button');
+            cell.textContent = day;
+            cell.className = 'calendar-day w-8 h-8 flex items-center justify-center';
+            
+            if (date.getTime() === currentDate.getTime()) {
+                cell.classList.add('selected');
+            }
+            if (formatDateKey(new Date()) === key) {
+                cell.classList.add('today');
+            }
+
+            const dayData = diaryData[key];
+            if (dayData) {
+                const completedCount = dayData.goals.filter(g => g.completed).length;
+                if (completedCount > 0) {
+                    const completion = completedCount / dayData.goals.length;
+                    if (completion === 1) cell.style.backgroundColor = 'rgba(34, 197, 94, 0.7)';
+                    else cell.style.backgroundColor = `rgba(59, 130, 246, ${0.1 + completion * 0.6})`;
+                    if(date.getTime() !== currentDate.getTime()) cell.classList.add('text-white', 'rounded-full');
+                }
+                 cell.onclick = () => {
+                    currentDate = new Date(date.getTime());
+                    renderDay(currentDate);
+                };
+            } else {
+                cell.disabled = true;
+                cell.classList.add('text-gray-300', 'cursor-not-allowed');
+            }
+            calendarBody.appendChild(cell);
+        }
+    }
+    
+    function renderChart() {
+        const ctx = document.getElementById('progressChart').getContext('2d');
+        const weekStart = new Date(currentDate);
+        const dayOfWeek = weekStart.getDay();
+        const startOffset = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+        weekStart.setDate(weekStart.getDate() - startOffset);
+        
+        const labels = [];
+        const data = [];
+        const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+        for(let i=0; i<7; i++) {
+            const day = new Date(weekStart);
+            day.setDate(day.getDate() + i);
+            labels.push(daysOfWeek[i]);
+            
+            const key = formatDateKey(day);
+            const dayData = diaryData[key];
+            if(dayData) {
+                const total = dayData.goals.length;
+                const completed = dayData.goals.filter(g => g.completed).length;
+                data.push(total > 0 ? (completed / total) * 100 : 0);
+            } else {
+                data.push(0);
+            }
+        }
+        
+        if (progressChart) {
+            progressChart.data.labels = labels;
+            progressChart.data.datasets[0].data = data;
+            progressChart.update();
+        } else {
+            progressChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '% Complete',
+                        data: data,
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: {
+                                callback: function(value) { return value + "%" }
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${Math.round(context.raw)}% Complete`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+    
+    document.getElementById('goals-list').addEventListener('change', (e) => {
+        const index = e.target.dataset.index;
+        if (index === undefined) return;
+        
+        const dateKey = formatDateKey(currentDate);
+        const dayData = diaryData[dateKey];
+
+        if (e.target.type === 'checkbox') {
+            dayData.goals[index].completed = e.target.checked;
+        } else {
+            dayData.goals[index].value = e.target.value;
+        }
+        
+        saveData();
+        renderChart();
+        renderCalendar();
+    });
+
+    document.getElementById('reflection-well').addEventListener('input', (e) => {
+        diaryData[formatDateKey(currentDate)].reflections.well = e.target.value;
+        saveData();
+    });
+
+    document.getElementById('reflection-improve').addEventListener('input', (e) => {
+        diaryData[formatDateKey(currentDate)].reflections.improve = e.target.value;
+        saveData();
+    });
+    
+    document.getElementById('summarize-btn').addEventListener('click', () => {
+        getReflectionSummary();
+    });
+    
+    document.getElementById('get-motivation-btn').addEventListener('click', () => {
+        getMotivationalQuote();
+    });
+
+    document.getElementById('prev-day').onclick = () => {
+        const newDate = new Date(currentDate.getTime());
+        newDate.setDate(newDate.getDate() - 1);
+        if (newDate >= START_DATE) {
+            currentDate = newDate;
+            calendarDate.setMonth(currentDate.getMonth(), 1);
+            renderDay(currentDate);
+        }
+    };
+
+    document.getElementById('next-day').onclick = () => {
+        const newDate = new Date(currentDate.getTime());
+        newDate.setDate(newDate.getDate() + 1);
+        if (newDate <= END_DATE) {
+            currentDate = newDate;
+            calendarDate.setMonth(currentDate.getMonth(), 1);
+            renderDay(currentDate);
+        }
+    };
+    
+    document.getElementById('go-to-today').onclick = () => {
+        let today = new Date();
+        if (today < START_DATE || today > END_DATE) { today = START_DATE; }
+        today.setHours(0,0,0,0);
+        currentDate = today;
+        calendarDate = new Date(currentDate.getTime());
+        renderDay(currentDate);
+    };
+
+    document.getElementById('prev-month').onclick = () => {
+        calendarDate.setMonth(calendarDate.getMonth() - 1);
+        renderCalendar();
+    };
+
+    document.getElementById('next-month').onclick = () => {
+        calendarDate.setMonth(calendarDate.getMonth() + 1);
+        renderCalendar();
+    };
+    
+    window.toggleModal = (show) => {
+        const modal = document.getElementById('contract-modal');
+        if (show) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        } else {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    };
+    
+    async function getReflectionSummary() {
+        const summaryBtn = document.getElementById('summarize-btn');
+        const summaryDiv = document.getElementById('reflection-summary');
+        const originalText = summaryBtn.textContent;
+        summaryBtn.textContent = 'Summarizing...';
+        summaryDiv.textContent = '';
+        summaryDiv.classList.add('hidden');
+
+        try {
+            const reflections = getReflectionsFromLocalStorage();
+            if (reflections.length === 0) {
+                summaryDiv.textContent = 'No reflections found to summarize. Start writing to see insights!';
+                summaryDiv.classList.remove('hidden');
+                return;
+            }
+            
+            const prompt = `Analyze the following diary reflections. Identify key themes, emotions, and progress over time. Provide a concise summary and a brief motivational insight based on the text.
+            
+            Reflections:
+            ${reflections.join('\n\n')}`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: {
+                    parts: [{ text: "You are a helpful life coach and analyst. Your tone is encouraging and insightful. Only provide a summary and motivational insight, do not add any additional conversational text." }]
+                }
+            };
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "Failed to get a summary.";
+            
+            summaryDiv.textContent = text;
+            summaryDiv.classList.remove('hidden');
+        } catch (error) {
+            summaryDiv.textContent = 'An error occurred while generating the summary. Please try again.';
+            summaryDiv.classList.remove('hidden');
+            console.error(error);
+        } finally {
+            summaryBtn.textContent = originalText;
+        }
+    }
+
+    async function getMotivationalQuote() {
+        const motivationBox = document.getElementById('motivation-box');
+        const motivationText = document.getElementById('motivation-text');
+        const originalText = document.getElementById('get-motivation-btn').textContent;
+        document.getElementById('get-motivation-btn').textContent = 'Loading...';
+
+        try {
+            const prompt = `Provide a short, inspiring and uplifting quote or a motivational message to help someone stay disciplined and focused on a long-term goal-setting journey.`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: {
+                    parts: [{ text: "You are an inspiring and positive motivational speaker. Only provide the quote/message itself, do not add any additional conversational text." }]
+                }
+            };
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "Failed to get a quote.";
+            
+            motivationText.textContent = text;
+            motivationBox.classList.remove('hidden');
+        } catch (error) {
+            motivationText.textContent = 'An error occurred. Please try again.';
+            motivationBox.classList.remove('hidden');
+            console.error(error);
+        } finally {
+             document.getElementById('get-motivation-btn').textContent = originalText;
+        }
+    }
+    
+    function getReflectionsFromLocalStorage() {
+        const reflections = [];
+        const today = new Date();
+        let date = new Date(today);
+        
+        for (let i = 0; i < 7; i++) {
+            const key = formatDateKey(date);
+            const dayData = diaryData[key];
+            if (dayData && (dayData.reflections.well || dayData.reflections.improve)) {
+                reflections.push(`Date: ${key}\nWhat went well: ${dayData.reflections.well}\nWhat to improve: ${dayData.reflections.improve}`);
+            }
+            date.setDate(date.getDate() - 1);
+        }
+        return reflections;
+    }
+
+    initData();
+    renderDay(currentDate);
+});
+</script>
+</body>
+</html>
