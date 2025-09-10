@@ -152,17 +152,10 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const START_DATE = new Date('2025-10-01T00:00:00');
-    const END_DATE = new Date('2026-01-01T00:00:00');
     
     let currentDate = new Date();
-    if (currentDate < START_DATE || currentDate > END_DATE) {
-        currentDate = START_DATE;
-    }
     currentDate.setHours(0, 0, 0, 0);
-
     let calendarDate = new Date(currentDate.getTime());
-
     let diaryData = {};
     let progressChart;
     const apiKey = "";
@@ -197,18 +190,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (storedData) {
             diaryData = JSON.parse(storedData);
         } else {
-            let date = new Date(START_DATE.getTime());
-            while(date <= END_DATE) {
-                const key = formatDateKey(date);
-                diaryData[key] = {
-                    goals: JSON.parse(JSON.stringify(defaultGoals)),
-                    reflections: {
-                        well: '',
-                        improve: ''
-                    }
-                };
-                date.setDate(date.getDate() + 1);
-            }
+            diaryData = {};
+        }
+        ensureDataForDay(currentDate);
+    }
+    
+    function ensureDataForDay(date) {
+        const key = formatDateKey(date);
+        if (!diaryData[key]) {
+             diaryData[key] = {
+                goals: JSON.parse(JSON.stringify(defaultGoals)),
+                reflections: {
+                    well: '',
+                    improve: ''
+                }
+            };
+            saveData();
         }
     }
     
@@ -217,6 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderDay(date) {
+        ensureDataForDay(date);
         const dateKey = formatDateKey(date);
         const dayData = diaryData[dateKey];
         if (!dayData) return;
@@ -295,14 +293,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     else cell.style.backgroundColor = `rgba(59, 130, 246, ${0.1 + completion * 0.6})`;
                     if(date.getTime() !== currentDate.getTime()) cell.classList.add('text-white', 'rounded-full');
                 }
-                 cell.onclick = () => {
-                    currentDate = new Date(date.getTime());
-                    renderDay(currentDate);
-                };
-            } else {
-                cell.disabled = true;
-                cell.classList.add('text-gray-300', 'cursor-not-allowed');
             }
+
+            cell.onclick = () => {
+                currentDate = new Date(date.getTime());
+                renderDay(currentDate);
+            };
             calendarBody.appendChild(cell);
         }
     }
@@ -418,26 +414,21 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('prev-day').onclick = () => {
         const newDate = new Date(currentDate.getTime());
         newDate.setDate(newDate.getDate() - 1);
-        if (newDate >= START_DATE) {
-            currentDate = newDate;
-            calendarDate.setMonth(currentDate.getMonth(), 1);
-            renderDay(currentDate);
-        }
+        currentDate = newDate;
+        calendarDate.setMonth(currentDate.getMonth(), 1);
+        renderDay(currentDate);
     };
 
     document.getElementById('next-day').onclick = () => {
         const newDate = new Date(currentDate.getTime());
         newDate.setDate(newDate.getDate() + 1);
-        if (newDate <= END_DATE) {
-            currentDate = newDate;
-            calendarDate.setMonth(currentDate.getMonth(), 1);
-            renderDay(currentDate);
-        }
+        currentDate = newDate;
+        calendarDate.setMonth(currentDate.getMonth(), 1);
+        renderDay(currentDate);
     };
     
     document.getElementById('go-to-today').onclick = () => {
         let today = new Date();
-        if (today < START_DATE || today > END_DATE) { today = START_DATE; }
         today.setHours(0,0,0,0);
         currentDate = today;
         calendarDate = new Date(currentDate.getTime());
