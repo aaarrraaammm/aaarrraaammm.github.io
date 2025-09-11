@@ -10,6 +10,7 @@
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
         }
         .calendar-grid {
             display: grid;
@@ -44,6 +45,31 @@
                 max-height: 350px;
             }
         }
+        
+        /* Dark Theme Styles */
+        body.dark {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+        body.dark .bg-gray-50 { background-color: #2d3748; }
+        body.dark .bg-white { background-color: #2d3748; color: #e2e8f0; }
+        body.dark .text-gray-800 { color: #e2e8f0; }
+        body.dark .text-gray-900 { color: #edf2f7; }
+        body.dark .text-gray-500 { color: #a0aec0; }
+        body.dark .text-gray-600 { color: #a0aec0; }
+        body.dark .text-gray-700 { color: #cbd5e0; }
+        body.dark .bg-blue-50 { background-color: #2a4365; }
+        body.dark .text-blue-800 { color: #90cdf4; }
+        body.dark .border-gray-200, body.dark .border-gray-300 { border-color: #4a5568; }
+        body.dark textarea, body.dark input[type="time"], body.dark input[type="number"] {
+            background-color: #4a5568;
+            color: #e2e8f0;
+            border-color: #6c7a8f;
+        }
+        body.dark .hover\:bg-gray-100:hover { background-color: #4a5568; }
+        body.dark .goal-item input:checked + label { color: #718096; }
+        body.dark .calendar-day { color: #a0aec0; }
+        body.dark .calendar-day.selected { background-color: #3b82f6; color: white; }
     </style>
     <!-- Chosen Palette: Calm Harmony (Warm neutrals with muted blue accents) -->
     <!-- Application Structure Plan: A single-page dashboard with a calendar-based navigation. The main view displays the selected day's interactive checklist and reflection notes. A sidebar contains the contract/rules (in a modal), a weekly progress chart, and the calendar. This task-focused design is more efficient and motivating than a long document, promoting daily engagement and clear progress tracking. -->
@@ -84,7 +110,8 @@
             <p class="text-gray-500 mb-6">Welcome, Petar Pavlović</p>
             
             <button onclick="toggleModal(true)" class="w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg mb-4 transition-colors">My Contract & Rules</button>
-            <button id="get-motivation-btn" class="w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors">✨ Get Motivation</button>
+            <button id="get-motivation-btn" class="w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors mb-4">✨ Get Motivation</button>
+            <button id="theme-toggle-btn" class="w-full bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors">Toggle Dark/Light Mode</button>
 
             <div class="mb-6 mt-6">
                 <div class="flex justify-between items-center mb-2">
@@ -410,7 +437,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('get-motivation-btn').addEventListener('click', () => {
         getMotivationalQuote();
     });
-
+    
+    document.getElementById('theme-toggle-btn').addEventListener('click', () => {
+        toggleTheme();
+    });
+    
     document.getElementById('prev-day').onclick = () => {
         const newDate = new Date(currentDate.getTime());
         newDate.setDate(newDate.getDate() - 1);
@@ -455,6 +486,20 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.classList.remove('flex');
         }
     };
+    
+    function toggleTheme() {
+        const body = document.body;
+        body.classList.toggle('dark');
+        const isDarkMode = body.classList.contains('dark');
+        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    }
+    
+    function loadTheme() {
+        const theme = localStorage.getItem('theme');
+        if (theme === 'dark') {
+            document.body.classList.add('dark');
+        }
+    }
     
     async function getReflectionSummary() {
         const summaryBtn = document.getElementById('summarize-btn');
@@ -555,6 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return reflections;
     }
 
+    loadTheme();
     initData();
     renderDay(currentDate);
 });
