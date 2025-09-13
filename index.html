@@ -75,13 +75,10 @@
         body.dark .calendar-day { color: #a0aec0; }
         body.dark .calendar-day.selected { background-color: #f59e0b; color: white; } /* Changed from blue */
     </style>
-    <!-- Chosen Palette: Calm Harmony (Warm neutrals with muted blue accents) -->
-    <!-- Application Structure Plan: A single-page dashboard with a calendar-based navigation. The main view displays the selected day's interactive checklist and reflection notes. A sidebar contains the contract/rules (in a modal), a weekly progress chart, and the calendar. This task-focused design is more efficient and motivating than a long document, promoting daily engagement and clear progress tracking. -->
-    <!-- Visualization & Content Choices: - Daily Goals: Interactive checklist (HTML/JS) for direct task management. Goal: Track. - Reflections: Textareas (HTML/JS) for easy input. Goal: Inform/Organize. - Weekly Progress: Bar Chart (Chart.js/Canvas) to visualize consistency. Goal: Compare/Change. Interaction: Updates in real-time. Justification: Visual feedback is a powerful motivator. - Navigation: Calendar (HTML/JS) for quick access to any day. Goal: Organize. All interactions are handled with vanilla JS and data is persisted in localStorage for a seamless single-user experience. -->
-    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 </head>
 <body class="bg-gray-50 text-gray-800">
 
+    <!-- Contract Modal -->
     <div id="contract-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
         <div class="bg-white rounded-lg shadow-xl p-8 max-w-2xl w-full">
             <h2 class="text-2xl font-bold mb-4 text-gray-900">My Winter Arc Contract & Rules</h2>
@@ -104,6 +101,19 @@
             </div>
             <div class="text-right mt-6">
                 <button onclick="toggleModal(false)" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Goal Modal -->
+    <div id="add-goal-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl p-8 max-w-sm w-full">
+            <h2 class="text-2xl font-bold mb-4 text-gray-900">Add New Goal</h2>
+            <p class="text-gray-600 mb-4">What is your new goal?</p>
+            <input id="new-goal-input" type="text" placeholder="e.g. Go for a run" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500">
+            <div class="flex justify-end space-x-2 mt-6">
+                <button id="cancel-add-goal" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors">Cancel</button>
+                <button id="confirm-add-goal" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Add</button>
             </div>
         </div>
     </div>
@@ -434,12 +444,31 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCalendar();
     });
     
+    // Add goal functionality
     document.getElementById('add-goal-btn').addEventListener('click', () => {
-        const dateKey = formatDateKey(currentDate);
-        const dayData = diaryData[dateKey];
-        dayData.goals.push(JSON.parse(JSON.stringify(defaultNewGoal)));
-        saveData();
-        renderDay(currentDate);
+        document.getElementById('add-goal-modal').classList.remove('hidden');
+        document.getElementById('add-goal-modal').classList.add('flex');
+    });
+
+    document.getElementById('confirm-add-goal').addEventListener('click', () => {
+        const newGoalInput = document.getElementById('new-goal-input');
+        const goalName = newGoalInput.value.trim();
+        if (goalName) {
+            const dateKey = formatDateKey(currentDate);
+            const dayData = diaryData[dateKey];
+            dayData.goals.push({ text: goalName, type: 'none', value: '', completed: false });
+            saveData();
+            renderDay(currentDate);
+        }
+        newGoalInput.value = '';
+        document.getElementById('add-goal-modal').classList.add('hidden');
+        document.getElementById('add-goal-modal').classList.remove('flex');
+    });
+
+    document.getElementById('cancel-add-goal').addEventListener('click', () => {
+        document.getElementById('new-goal-input').value = '';
+        document.getElementById('add-goal-modal').classList.add('hidden');
+        document.getElementById('add-goal-modal').classList.remove('flex');
     });
 
     document.getElementById('delete-goal-btn').addEventListener('click', () => {
