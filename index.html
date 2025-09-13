@@ -161,7 +161,7 @@
                 </div>
 
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
-                    <div class="flex flex-col sm:flex-row items-center justify-between mb-4 border-b pb-4">
+                    <div class="flex flex-col sm:flex-row items-center sm:justify-between mb-4 border-b pb-4">
                         <h3 class="text-xl font-semibold text-gray-800">Today's Goals</h3>
                         <div class="flex space-x-2 mt-4 sm:mt-0">
                             <button id="add-goal-btn" class="bg-white border border-gray-300 hover:bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg transition-colors text-sm">+ Add New Goal</button>
@@ -216,7 +216,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { text: 'Fat - g:', type: 'number', value: '71', completed: false },
         { text: 'No Artificial Sugar', type: 'none', value: '', completed: false },
         { text: 'Journal', type: 'none', value: '', completed: false },
-        // Added 'Meditation' as a new goal
         { text: 'Meditation min:', type: 'number', value: '10', completed: false },
         { text: 'Drink L of water:', type: 'number', value: '3', completed: false },
         { text: 'Read pages:', type: 'number', value: '10', completed: false },
@@ -230,8 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { text: 'Work on a personal project for hours:', type: 'number', value: '1', completed: false },
     ];
     
-    const defaultNewGoal = { text: 'New custom goal', type: 'none', value: '', completed: false };
-
     function formatDateKey(date) {
         return date.toISOString().split('T')[0];
     }
@@ -454,9 +451,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const newGoalInput = document.getElementById('new-goal-input');
         const goalName = newGoalInput.value.trim();
         if (goalName) {
-            const dateKey = formatDateKey(currentDate);
-            const dayData = diaryData[dateKey];
-            dayData.goals.push({ text: goalName, type: 'none', value: '', completed: false });
+            const newGoal = { text: goalName, type: 'none', value: '', completed: false };
+            
+            // Loop through all existing days in the diaryData and add the new goal
+            for (const key in diaryData) {
+                if (diaryData.hasOwnProperty(key)) {
+                    diaryData[key].goals.push(JSON.parse(JSON.stringify(newGoal)));
+                }
+            }
+
             saveData();
             renderDay(currentDate);
         }
@@ -472,13 +475,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.getElementById('delete-goal-btn').addEventListener('click', () => {
-        const dateKey = formatDateKey(currentDate);
-        const dayData = diaryData[dateKey];
-        if (dayData.goals.length > 0) {
-            dayData.goals.pop();
-            saveData();
-            renderDay(currentDate);
+        // Find the last added goal that is not a default goal and delete it from all days
+        for (const key in diaryData) {
+            if (diaryData.hasOwnProperty(key)) {
+                // Remove the last goal from the goals array
+                diaryData[key].goals.pop();
+            }
         }
+        saveData();
+        renderDay(currentDate);
     });
 
     document.getElementById('reflection-well').addEventListener('input', (e) => {
